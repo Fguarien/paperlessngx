@@ -1,0 +1,132 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:${REDIS_VERSION}
+    command: ["/bin/sh","-c","redis-server --requirepass ${REDIS_PASS}"]
+    container_name: ${COMPOSE_PROJECT_NAME}-REDIS
+    hostname: paper-redis
+    mem_limit: 512m
+    mem_reservation: 256m
+    cpu_shares: 768
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    user: "${USERMAP_UID}:${USERMAP_GID}"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping || exit 1"]
+    volumes:
+      - ${VOLUME_PATH}/redis:/data:rw
+    environment:
+      TZ: ${TZ}
+    restart: on-failure:5
+
+  db:
+    image: postgres:${POSTGRES_VERSION}
+    container_name: ${COMPOSE_PROJECT_NAME}-DB
+    hostname: paper-db
+    mem_limit: 1g
+    cpu_shares: 768
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-d", "${POSTGRES_DB}", "-U", "${POSTGRES_USER}"]
+      timeout: 45s
+      interval: 10s
+      retries: 10
+    volumes:
+      - ${VOLUME_PATH}/db:/var/lib/postgresql/data:rw
+    environment:
+      TZ: ${TZ}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASS}
+    restart: on-failure:5
+
+  gotenberg:
+    image: gotenberg/gotenberg:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-GOTENBERG
+    hostname: gotenberg
+    security_opt:
+      - no-new-privileges:true
+    user: "${USERMAP_UID}:${USERMAP_GID}"
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=file:///tmp/.*"
+    environment:
+      TZ: ${TZ}
+    restart: on-failure:5
+
+  tika:
+    image: ghcr.io/paperless-ngx/tika:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-TIKA
+    hostname: tika
+    security_opt:
+      - no-new-privileges:true
+    user: "${USERMAP_UID}:${USERMAP_GID}"
+    environment:
+      TZ: ${TZ}
+    restart: on-failure:5
+
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-NGX
+    hostname: paperless-ngx
+    mem_limit: 6g
+    cpu_shares: 1024
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "-S", "--max-time", "2", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    ports:
+      - "${PAPERLESS_PORT}:8000"
+    volumes:
+      - ${VOLUME_PATH}/data:/usr/src/paperless/data:rw
+      - ${VOLUME_PATH}/media:/usr/src/paperless/media:rw
+      - ${VOLUME_PATH}/export:/usr/src/paperless/export:rw
+      - ${CONSUME_PATH_FRED}:/usr/src/paperless/consume/analogique:rw
+      - ${CONSUME_PATH_OLI}:/usr/src/paperless/consume/olivia:rw
+      - ${CONSUME_PATH}:/usr/src/paperless/consume/commun:rw
+      - ${VOLUME_PATH}/trash:/usr/src/paperless/trash:rw
+    environment:
+      TZ: ${TZ}
+      PAPERLESS_TIME_ZONE: ${TZ}
+      PAPERLESS_REDIS: redis://:${REDIS_PASS}@paper-redis:6379
+      PAPERLESS_DBENGINE: postgresql
+      PAPERLESS_DBHOST: paper-db
+      PAPERLESS_DBNAME: ${POSTGRES_DB}
+      PAPERLESS_DBUSER: ${POSTGRES_USER}
+      PAPERLESS_DBPASS: ${POSTGRES_PASS}
+      PAPERLESS_EMPTY_TRASH_DIR: ../trash
+      PAPERLESS_FILENAME_FORMAT: "{{ created_year }}/{{ correspondent }}/{{ document_type }}/{{ title }}"
+      PAPERLESS_OCR_ROTATE_PAGES_THRESHOLD: 6
+      PAPERLESS_TASK_WORKERS: 1
+      USERMAP_UID: ${USERMAP_UID}
+      USERMAP_GID: ${USERMAP_GID}
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
+      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER}
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD}
+      PAPERLESS_URL: ${PAPERLESS_URL}
+      PAPERLESS_CSRF_TRUSTED_ORIGINS: ${PAPERLESS_CSRF_TRUSTED_ORIGINS}
+      PAPERLESS_OCR_LANGUAGE: ${PAPERLESS_OCR_LANGUAGE}
+      PAPERLESS_TESSERACT_LANGUAGES: ${PAPERLESS_TESSERACT_LANGUAGES}
+      PAPERLESS_TIKA_ENABLED: "1"
+      PAPERLESS_TIKA_GOTENBERG_ENDPOINT: "http://gotenberg:3000"
+      PAPERLESS_TIKA_ENDPOINT: "http://tika:9998"
+      PAPERLESS_CONSUMER_RECURSIVE: ${PAPERLESS_CONSUMER_RECURSIVE}
+      PAPERLESS_CONSUMER_IGNORE_PATTERNS: ${PAPERLESS_CONSUMER_IGNORE_PATTERNS}
+
+    restart: on-failure:5
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      tika:
+        condition: service_started
+      gotenberg:
+        condition: service_started
