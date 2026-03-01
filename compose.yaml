@@ -1,31 +1,42 @@
-version: "3.9"
-
 services:
   redis:
     image: redis:${REDIS_VERSION}
-    command: ["/bin/sh","-c","redis-server --requirepass ${REDIS_PASS}"]
+    command: ["redis-server", "--requirepass", "${REDIS_PASS}", "--dir", "/data", "--appendonly", "yes"]
     container_name: ${COMPOSE_PROJECT_NAME}-REDIS
     hostname: paper-redis
-    mem_limit: 512m
+    mem_limit: 1g
     mem_reservation: 256m
     cpu_shares: 768
     security_opt:
       - no-new-privileges:true
     read_only: true
-    user: "${USERMAP_UID}:${USERMAP_GID}"
+    user: "${REDIS_UID}:${REDIS_GID}"
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping || exit 1"]
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASS}\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
     volumes:
       - ${VOLUME_PATH}/redis:/data:rw
     environment:
       TZ: ${TZ}
-    restart: on-failure:5
-
+      REDIS_PASS: ${REDIS_PASS}
+    restart: always
+    networks:
+      - infrastructure_network
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "3"
   db:
     image: postgres:${POSTGRES_VERSION}
     container_name: ${COMPOSE_PROJECT_NAME}-DB
     hostname: paper-db
-    mem_limit: 1g
+    mem_limit: 4g
     cpu_shares: 768
     security_opt:
       - no-new-privileges:true
@@ -41,8 +52,17 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASS}
-    restart: on-failure:5
-
+    restart: always
+    networks:
+      - infrastructure_network
+    mem_reservation: 1g
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "3"
   gotenberg:
     image: gotenberg/gotenberg:latest
     container_name: ${COMPOSE_PROJECT_NAME}-GOTENBERG
@@ -56,10 +76,20 @@ services:
       - "--chromium-allow-list=file:///tmp/.*"
     environment:
       TZ: ${TZ}
-    restart: on-failure:5
-
+    restart: always
+    networks:
+      - infrastructure_network
+    mem_limit: 12g
+    mem_reservation: 2g
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "3"
   tika:
-    image: ghcr.io/paperless-ngx/tika:latest
+    image: apache/tika:latest
     container_name: ${COMPOSE_PROJECT_NAME}-TIKA
     hostname: tika
     security_opt:
@@ -67,14 +97,30 @@ services:
     user: "${USERMAP_UID}:${USERMAP_GID}"
     environment:
       TZ: ${TZ}
-    restart: on-failure:5
-
+    restart: always
+    networks:
+      - infrastructure_network
+    mem_limit: 12g
+    mem_reservation: 2g
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "3"
   paperless:
     image: ghcr.io/paperless-ngx/paperless-ngx:latest
     container_name: ${COMPOSE_PROJECT_NAME}-NGX
     hostname: paperless-ngx
-    mem_limit: 6g
-    cpu_shares: 1024
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 16G
+        reservations:
+          cpus: '0.1'
+          memory: 2G
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -104,7 +150,7 @@ services:
       PAPERLESS_EMPTY_TRASH_DIR: ../trash
       PAPERLESS_FILENAME_FORMAT: "{{ created_year }}/{{ correspondent }}/{{ document_type }}/{{ title }}"
       PAPERLESS_OCR_ROTATE_PAGES_THRESHOLD: 6
-      PAPERLESS_TASK_WORKERS: 1
+      PAPERLESS_TASK_WORKERS: 3
       USERMAP_UID: ${USERMAP_UID}
       USERMAP_GID: ${USERMAP_GID}
       PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
@@ -119,8 +165,16 @@ services:
       PAPERLESS_TIKA_ENDPOINT: "http://tika:9998"
       PAPERLESS_CONSUMER_RECURSIVE: ${PAPERLESS_CONSUMER_RECURSIVE}
       PAPERLESS_CONSUMER_IGNORE_PATTERNS: ${PAPERLESS_CONSUMER_IGNORE_PATTERNS}
-
-    restart: on-failure:5
+      PAPERLESS_CONSUMER_POLLING: ${PAPERLESS_CONSUMER_POLLING}
+      PAPERLESS_APPS: ${PAPERLESS_APPS}
+      PAPERLESS_SOCIALACCOUNT_PROVIDERS: ${PAPERLESS_SOCIALACCOUNT_PROVIDERS}
+      PAPERLESS_LOGOUT_REDIRECT_URL: ${PAPERLESS_LOGOUT_REDIRECT_URL}
+      PAPERLESS_SOCIAL_AUTO_SIGNUP: ${PAPERLESS_SOCIAL_AUTO_SIGNUP}
+      PAPERLESS_SOCIALACCOUNT_ALLOW_SIGNUPS: ${PAPERLESS_SOCIALACCOUNT_ALLOW_SIGNUPS} 
+      PAPERLESS_SOCIALACCOUNT_EMAIL_AUTHENTICATION: ${PAPERLESS_SOCIALACCOUNT_EMAIL_AUTHENTICATION}     
+    restart: always
+    networks:
+      - infrastructure_network
     depends_on:
       db:
         condition: service_healthy
@@ -130,3 +184,13 @@ services:
         condition: service_started
       gotenberg:
         condition: service_started
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "3"
+networks:
+  infrastructure_network:
+    external: true

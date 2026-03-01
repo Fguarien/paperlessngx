@@ -7,3 +7,9 @@ data/
 logs/
 *.log
 # -------------------------
+log/
+_logs/
+_archives/
+*.tmp
+db/
+media/
