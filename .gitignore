@@ -46,3 +46,27 @@ media/documents/originals/1997/Syngress/none/Acknowledgments.pdf
 media/documents/originals/1990/Osborne-McGraw-Hill/Book/Hacking Linux Exposed- Linux Security Secrets & Solutions.pdf
 media/documents/originals/2003/Mark D. Spivey, CISSP/Book/Practical Hacking Techniques and Countermeasures.pdf
 data/index/MAIN_mpkkrk3zl6mb6i8p.seg
+
+# ── Artefacts macOS (ajout automatique v4.3) ──────────────
+.fseventsd/
+.Spotlight-V100/
+.Trashes/
+.DS_Store
+.AppleDouble
+._*
+.DocumentRevisions-V100/
+.TemporaryItems/
+
+# ── NFS lock files (ajout auto v4.4) ────────────────────
+.nfs*
+
+# ── PostgreSQL données internes (ajout auto v4.4) ────────
+postgres/base/
+postgres/global/
+postgres/pg_wal/
+postgres/pg_xact/
+postgres/pg_stat_tmp/
+postgres/postmaster.pid
+
+# ── Prometheus TSDB (ajout auto v4.4) ───────────────────
+prometheus/data/
