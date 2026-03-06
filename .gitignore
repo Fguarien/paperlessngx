@@ -70,3 +70,21 @@ postgres/postmaster.pid
 
 # ── Prometheus TSDB (ajout auto v4.4) ───────────────────
 prometheus/data/
+db/base/16384/16606
+db/base/16384/16696
+data/index/MAIN_mpkkrk3zl6mb6i8p.seg
+media/documents/archive/1950/Jon Erickson/Book/Techniques de hacking.pdf
+media/documents/archive/2007/Reverend Bill Blunden/Book/The Rootkit Arsenal- Escape and Evasion in the Dark Corners of the System.pdf
+media/documents/archive/2019/Aurélien VANNIEUWENHUYZE/Book/Intelligence Artificielle Vulgarisée.pdf
+media/documents/archive/1970/Michel Drac/Livre/Survivre.pdf
+media/documents/archive/1997/Syngress/none/Acknowledgments.pdf
+media/documents/archive/2003/Mark D. Spivey, CISSP/Book/Practical Hacking Techniques and Countermeasures.pdf
+media/documents/originals/2014/Make Media, Inc/Magazine/Make- Magazine - November 2014.pdf
+media/documents/originals/2023/Samsung/Manual/Manual del usuario y de instalación.pdf
+media/documents/originals/1960/Frédéric SALDMANN/Livre/Prenez votre santé en main!.pdf
+media/documents/originals/1950/Jon Erickson/Book/Techniques de hacking.pdf
+media/documents/originals/2019/Aurélien VANNIEUWENHUYZE/Book/Intelligence Artificielle Vulgarisée.pdf
+media/documents/originals/1970/Michel Drac/Livre/Survivre.pdf
+media/documents/originals/1997/Syngress/none/Acknowledgments.pdf
+media/documents/originals/1990/Osborne-McGraw-Hill/Book/Hacking Linux Exposed- Linux Security Secrets & Solutions.pdf
+media/documents/originals/2003/Mark D. Spivey, CISSP/Book/Practical Hacking Techniques and Countermeasures.pdf
